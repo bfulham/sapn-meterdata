@@ -1,0 +1,11 @@
+name: "SAPN Meterdata"
+description: "SA Power Networks api"
+version: "1.0.0"
+slug: "sapn_meterdata"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
