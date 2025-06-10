@@ -3,6 +3,25 @@ import json
 from datetime import datetime, timedelta
 import nemreader
 
+class LoginError(Exception):
+    """Raised when login fails."""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+    pass
+class AuthError(Exception):
+    """Raised when failed to retrieved csrf and/or authorization."""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+    pass
+class FetchError(Exception):
+    """Raised when failed to retrieved meterdata."""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+    pass
+
 class meter():
     def __init__(self, NMI:int, email:str, password:str):
         self.nmi = NMI
@@ -20,13 +39,13 @@ class meter():
         CADSiteLogin_response_data = CADSiteLogin_response.text
 
         if(CADSiteLogin_response.status_code == 200):
-            print("login successfull")
+            print("successfully logged in")
         else:
-            print("login fail")
+            raise LoginError("failed to login")
 
         self.sid = CADSiteLogin_response_data[CADSiteLogin_response_data.find("sid="):CADSiteLogin_response_data.find("&",CADSiteLogin_response_data.find("sid="))]
 
-        cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/CADRequestMeterData?selNMI={NMI}"
+        cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/CADRequestMeterData"
         cadenergydashboard_headers = {
             "Cookie": self.sid
         }
@@ -36,6 +55,10 @@ class meter():
 
         cadenergydashboard_raw = cadenergydashboard_response_data[cadenergydashboard_response_data.find('{"name":"downloadNMIData"'):cadenergydashboard_response_data.find('"}',cadenergydashboard_response_data.find('{"name":"downloadNMIData"'))+2]
         downloadNMIData = json.loads(cadenergydashboard_raw)
+        if 'csrf' in downloadNMIData and 'authorization' in downloadNMIData:
+            print('successfully retrieved csrf & authorization')
+        else:
+            raise AuthError('failed to retrieved csrf and/or authorization')
 
         self.method = downloadNMIData['name']
         self.csrf = downloadNMIData['csrf']
@@ -70,6 +93,10 @@ class meter():
 
         downloadNMIData_response = requests.post(downloadNMIData_url, headers=downloadNMIData_headers, json=downloadNMIData_data)
         downloadNMIData = json.loads(downloadNMIData_response.text)
+        if 'message' in downloadNMIData[0]['result']:
+            raise FetchError(downloadNMIData[0]['result']['message'])
+        else:
+            print('successfully retrieved meterdata')
         filename = downloadNMIData[0]['result']['filename']
         self.data = downloadNMIData[0]['result']['results']
 
@@ -81,5 +108,5 @@ class meter():
         self.dataframes = nemreader.output_as_data_frames(filepath + filename, split_days=True, set_interval=None, strict=False)
         return filepath + filename
 
-meterdata = meter(20021737816, "bfulham@bradyfulham.com", "Bfltdb02")
+meterdata = meter(20021737815, "bfulham@bradyfulham.com", "Bfltdb02")
 filepath = meterdata.getdata("D:\\Users\\Bfulh\\Desktop\\sapn data\\data", datetime.today() - timedelta(2), datetime.today())
