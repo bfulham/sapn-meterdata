@@ -107,6 +107,3 @@ class meter():
             text_file.write(self.data)
         self.dataframes = nemreader.output_as_data_frames(filepath + filename, split_days=True, set_interval=None, strict=False)
         return filepath + filename
-
-meterdata = meter(20021737815, "bfulham@bradyfulham.com", "Bfltdb02")
-filepath = meterdata.getdata("D:\\Users\\Bfulh\\Desktop\\sapn data\\data", datetime.today() - timedelta(2), datetime.today())
