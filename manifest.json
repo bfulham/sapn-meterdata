@@ -1,0 +1,16 @@
+{
+  "domain": "sapn_meterdata",
+  "name": "SA Power Networks Meterdata",
+  "codeowners": ["@bfulham"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/bfulham/sapn-meterdata",
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "requirements": [
+    "json",
+    "datetime",
+    "nemreader",
+    "bs4"
+  ]
+}

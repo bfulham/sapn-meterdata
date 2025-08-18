@@ -50,7 +50,9 @@ class login():
             raise LoginError("failed to login")
         self.text = CADSiteLogin_response.text
         self.sid = CADSiteLogin_response.text[CADSiteLogin_response.text.find("sid="):CADSiteLogin_response.text.find("&",CADSiteLogin_response.text.find("sid="))]
-        
+        self.methods = {}
+
+    def updatedownloadNMIDataKeys(self):
         cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/CADRequestMeterData"
         cadenergydashboard_headers = {
             "Cookie": self.sid
@@ -66,18 +68,61 @@ class login():
         else:
             raise AuthError('failed to retrieved csrf and/or authorization')
 
-        self.method = downloadNMIData['name']
-        self.csrf = downloadNMIData['csrf']
-        self.auth = downloadNMIData['authorization']
+        self.methods[downloadNMIData['name']] = {}
+        self.methods[downloadNMIData['name']]['csrf'] = downloadNMIData['csrf']
+        self.methods[downloadNMIData['name']]['authorization'] = downloadNMIData['authorization']
+    def updategetNMIAssignmentsKeys(self):
+        cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/apex/cadenergydashboard/meterdata/cadaccountpage"
+        cadenergydashboard_headers = {
+            "Cookie": self.sid
+        }
+
+        cadenergydashboard_response = requests.get(cadenergydashboard_url, headers=cadenergydashboard_headers)
+        cadenergydashboard_response_data = cadenergydashboard_response.text
+
+        cadenergydashboard_raw = cadenergydashboard_response_data[cadenergydashboard_response_data.find('{"name":"getNMIAssignments"'):cadenergydashboard_response_data.find('"}',cadenergydashboard_response_data.find('{"name":"getNMIAssignments"'))+2]
+        getNMIAssignments = json.loads(cadenergydashboard_raw)
+        if 'csrf' in getNMIAssignments and 'authorization' in getNMIAssignments:
+            print('successfully retrieved csrf & authorization')
+        else:
+            raise AuthError('failed to retrieved csrf and/or authorization')
+
+        self.methods['getNMIAssignments'] = {}
+        self.methods['getNMIAssignments']['csrf'] = getNMIAssignments['csrf']
+        self.methods['getNMIAssignments']['authorization'] = getNMIAssignments['authorization']
+    def getNMIs(self):
+        self.updategetNMIAssignmentsKeys()
+        getNMIAssignments_data = {
+            "action":"CADLandingPageController",
+            "method":"getNMIAssignments",
+            "type":"rpc",
+            "tid":2,
+            "ctx":{
+                "csrf": self.methods['getNMIAssignments']['csrf'],
+                "vid":"06628000004kHTl",
+                "ns":"",
+                "ver":35,
+                "authorization":self.methods['getNMIAssignments']['authorization']
+            }
+        }
+        getNMIAssignments_headers = {
+            "Cookie": self.sid,
+            "referer":"https://customer.portal.sapowernetworks.com.au/meterdata/CADAccountPage"
+        }
+        getNMIAssignments_url = "https://customer.portal.sapowernetworks.com.au/meterdata/apexremote"
+
+        getNMIAssignments_response = requests.post(getNMIAssignments_url, headers=getNMIAssignments_headers, json=getNMIAssignments_data)
+        print(getNMIAssignments_response.text)
 
 class meter():
     def __init__(self, NMI:int, login_details:login):
         self.nmi = NMI
         self.login_details = login_details
     def getdata(self, filepath:str, startdate:datetime = datetime.today() - timedelta(2), enddate:datetime = datetime.today()):
+        self.login_details.updatedownloadNMIDataKeys()
         downloadNMIData_data = {
             "action": "CADRequestMeterDataController",
-            "method": self.login_details.method,
+            "method": 'downloadNMIData',
             "data": [
                 self.nmi,
                 "SAPN",
@@ -90,11 +135,11 @@ class meter():
             "type": "rpc",
             "tid": 5,
             "ctx": {
-                "csrf": self.login_details.csrf,
+                "csrf": self.login_details.methods['downloadNMIData']['csrf'],
                 "vid": "06628000004kHU7",
                 "ns": "",
                 "ver": 35,
-                "authorization": self.login_details.auth
+                "authorization": self.login_details.methods['downloadNMIData']['authorization']
             }
         }
         downloadNMIData_headers = {
