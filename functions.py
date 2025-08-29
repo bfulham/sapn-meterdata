@@ -51,9 +51,10 @@ class login():
         self.text = CADSiteLogin_response.text
         self.sid = CADSiteLogin_response.text[CADSiteLogin_response.text.find("sid="):CADSiteLogin_response.text.find("&",CADSiteLogin_response.text.find("sid="))]
         self.methods = {}
-
+        link = CADSiteLogin_response.text[CADSiteLogin_response.text.find(".handleRedirect('")+17:CADSiteLogin_response.text.find("'); }",CADSiteLogin_response.text.find(".handleRedirect('")+17)]
+        requests.get(link)
     def updatedownloadNMIDataKeys(self):
-        cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/CADRequestMeterData"
+        cadenergydashboard_url = "https://customer.portal.sapowernetworks.com.au/meterdata/CADRequestMeterData"
         cadenergydashboard_headers = {
             "Cookie": self.sid
         }
@@ -72,14 +73,14 @@ class login():
         self.methods[downloadNMIData['name']]['csrf'] = downloadNMIData['csrf']
         self.methods[downloadNMIData['name']]['authorization'] = downloadNMIData['authorization']
     def updategetNMIAssignmentsKeys(self):
-        cadenergydashboard_url = f"https://customer.portal.sapowernetworks.com.au/meterdata/apex/cadenergydashboard/meterdata/cadaccountpage"
-        cadenergydashboard_headers = {
-            "Cookie": self.sid
+        cadenergydashboard_url = "https://customer.portal.sapowernetworks.com.au/meterdata/apex/cadenergydashboardmeterdata/cadaccountpage"
+        cadenergydashboard_cookies = {
+            "sid": self.sid[4:]
         }
 
-        cadenergydashboard_response = requests.get(cadenergydashboard_url, headers=cadenergydashboard_headers)
+        cadenergydashboard_response = requests.get(cadenergydashboard_url, cookies=cadenergydashboard_cookies)
         cadenergydashboard_response_data = cadenergydashboard_response.text
-
+        print(cadenergydashboard_response_data)
         cadenergydashboard_raw = cadenergydashboard_response_data[cadenergydashboard_response_data.find('{"name":"getNMIAssignments"'):cadenergydashboard_response_data.find('"}',cadenergydashboard_response_data.find('{"name":"getNMIAssignments"'))+2]
         getNMIAssignments = json.loads(cadenergydashboard_raw)
         if 'csrf' in getNMIAssignments and 'authorization' in getNMIAssignments:
@@ -90,6 +91,7 @@ class login():
         self.methods['getNMIAssignments'] = {}
         self.methods['getNMIAssignments']['csrf'] = getNMIAssignments['csrf']
         self.methods['getNMIAssignments']['authorization'] = getNMIAssignments['authorization']
+        
     def getNMIs(self):
         self.updategetNMIAssignmentsKeys()
         getNMIAssignments_data = {
@@ -101,8 +103,7 @@ class login():
                 "csrf": self.methods['getNMIAssignments']['csrf'],
                 "vid":"06628000004kHTl",
                 "ns":"",
-                "ver":35,
-                "authorization":self.methods['getNMIAssignments']['authorization']
+                "ver":35
             }
         }
         getNMIAssignments_headers = {
